@@ -1,0 +1,63 @@
+# Globalne ignorowanie środowisk, logów i cache
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.pid
+.cache/
+coverage/
+dist/
+build/
+tmp/
+__pycache__/
+.DS_Store
+Thumbs.db
+
+# 🐍 Python / Backend
+backend/app/__pycache__/
+backend/app/**/*.py[cod]
+backend/venv/
+backend/.env
+backend/.venv/
+backend/*.egg-info/
+backend/.pytest_cache/
+
+# 📦 Python dependency lock files (opcjonalnie, jeśli generowane)
+backend/poetry.lock
+backend/Pipfile.lock
+
+# 🧪 Testy i dane tymczasowe
+backend/.mypy_cache/
+backend/.coverage
+backend/htmlcov/
+
+# 🌐 Frontend / React / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*.local
+frontend/.vite/
+frontend/.eslintcache
+
+# IDE / Editor configs
+.vscode/
+.idea/
+*.code-workspace
+
+# 🚢 Docker
+.env
+*.local.yml
+docker-compose.override.yml
+
+# 📊 Bazy / eksporty
+*.sqlite3
+*.db
+*.csv
+*.xls
+*.json
+*.parquet
+
+# 🧪 Test outputs / reports
+**/test-results/
+**/reports/
