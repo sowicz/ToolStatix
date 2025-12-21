@@ -10,7 +10,7 @@ from drivers.OPCUA.opcua_client import OpcUaClient
 from drivers.OPCUA.data_handler import DataHandler
 
 from drivers.OPCUA.opcua_new_client import OpcUaConnection
-from drivers.OPCUA.opcua_manager import OpcUaConnectionManager
+from drivers.OPCUA.opcua_client import OpcUaConnection
 # TESTING
 from drivers.OPCUA.opcua_subscription import OpcuaSubscription
 
@@ -109,78 +109,46 @@ async def stop_subscription_tag(tag_id: int):
 
 
 @router.post("/opcua/connect/{data_source_id}")
-async def opcua_connect(
-    data_source_id: int,
-    db: Session = Depends(get_db)
-):
-    data_source = db.query(
-        network_data_source_model.NetworkDataSource
-    ).filter(
-        network_data_source_model.NetworkDataSource.id == data_source_id
-    ).first()
+async def opcua_connect(data_source_id: int ,db: Session = Depends(get_db)):
 
-    if not data_source:
-        raise HTTPException(404, "Data source not found")
-
+    data_source = db.query(network_data_source_model.NetworkDataSource).filter(
+        network_data_source_model.NetworkDataSource.id == data_source_id).first()
     server_url = f"opc.tcp://{data_source.server_url}:{data_source.port}"
-    node_id = "ns=2;s=Channel1.TEST.sine1"
+    node_id = 'ns=2;s=Channel1.TEST.sine1'
 
-    # OPCUA connectionManager
-    opc = await OpcUaConnectionManager.get_connection(server_url)
-
+    opc = OpcUaConnection(server_url)
+    await opc.connect()
     if not opc.is_connected():
-        raise HTTPException(500, "Can't connect to OPC UA")
-
+        raise HTTPException(status_code=500, detail="Can't connect to OPC UA")
+    
+    client = opc.get_client()
     try:
-        client = opc.get_client()
         node = client.get_node(node_id)
         value = await node.read_value()
-
         return {
-            "server_url": server_url,
-            "connected": True,
             "node_id": node_id,
             "value": value
         }
-
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error reading node value: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error reading: {e}")
     
 
 @router.post("/opcua/disconnect/{data_source_id}")
-async def disconnect_opcua(
-    data_source_id: int,
-    db: Session = Depends(get_db)
-):
-    data_source = db.query(
-        network_data_source_model.NetworkDataSource
-    ).filter(
-        network_data_source_model.NetworkDataSource.id == data_source_id
-    ).first()
+async def disconnect_opcua(data_source_id: int,db: Session = Depends(get_db)):
 
+    data_source = db.query(network_data_source_model.NetworkDataSource).filter(
+        network_data_source_model.NetworkDataSource.id == data_source_id).first()
     if not data_source:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Can't find data source with id {data_source_id}"
-        )
-
+        raise HTTPException(status_code=404, detail=f"Can't find data source with id {data_source_id}")
     server_url = f"opc.tcp://{data_source.server_url}:{data_source.port}"
 
-    # OPCUA connectionManager
-    conn = OpcUaConnectionManager._connections.get(server_url)
+    opc = OpcUaConnection(server_url)
 
-    if not conn or not conn.is_connected():
+    if not opc.is_connected():
         raise HTTPException(status_code=400, detail="Already disconnected")
 
-    await conn.disconnect()
-
-    return {
-        "server_url": server_url,
-        "connected": False
-    }
+    await opc.disconnect()
+    return {"status": f"Disconnect with opcua"}
 
 
 @router.get("/active-tags")
@@ -190,71 +158,16 @@ def check_connections():
     }
 
 
-@router.get("/status/tag/{tag_id}")
+@router.get("/status/{tag_id}")
 def status(tag_id: int):
     entry = ACTIVE_TAGS.get(tag_id)
-
     if not entry:
         return {"status": "not running"}
 
     subscription = entry["subscription"]
-
     return {
         "status": "running" if subscription.is_running() else "stopped"
     }
 
 
-@router.get("/opcua/status/data-source/{data_source_id}")
-async def opcua_status(
-    data_source_id: int,
-    db: Session = Depends(get_db)
-):
-    data_source = (
-        db.query(network_data_source_model.NetworkDataSource)
-        .join(network_data_source_model.NetworkDataSource.machines)
-        .filter(
-            network_data_source_model.NetworkDataSource.id == data_source_id
-        )
-        .first()
-    )
 
-    if not data_source:
-        raise HTTPException(404, "Data source not found")
-
-    server_url = f"opc.tcp://{data_source.server_url}:{data_source.port}"
-
-    return {
-        "data_source_id": data_source.id,
-        "machine_id": data_source.machine_id,
-        "machine_name": data_source.machines.name,
-        "server_url": server_url,
-        "connected": OpcUaConnectionManager.is_connected(server_url)
-    }
-
-
-
-@router.get("/opcua/status/data-sources-all")
-async def opcua_data_sources_status(
-    db: Session = Depends(get_db)
-):
-    data_sources = (
-        db.query(network_data_source_model.NetworkDataSource)
-        .join(network_data_source_model.NetworkDataSource.machines)
-        .all()
-    )
-
-    result = []
-
-    for ds in data_sources:
-        server_url = f"opc.tcp://{ds.server_url}:{ds.port}"
-
-        result.append({
-            "data_source_id": ds.id,
-            "machine_id": ds.machine_id,
-            "machine_name": ds.machines.name,
-            "protocol": ds.protocol,
-            "server_url": server_url,
-            "connected": OpcUaConnectionManager.is_connected(server_url)
-        })
-
-    return result
