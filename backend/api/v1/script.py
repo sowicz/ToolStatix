@@ -6,13 +6,11 @@ from db.database import get_db
 
 from db.models import main_tags, related_tags
 from db.models import network_data_source_model
-from drivers.OPCUA.opcua_client import OpcUaConnection
-from drivers.OPCUA.data_handler import DataHandler
 
-# from drivers.OPCUA.opcua_new_client import OpcUaConnection
+from drivers.OPCUA.data_handler import DataHandler
 from drivers.OPCUA.opcua_manager import OpcUaConnectionManager
 # TESTING
-from drivers.OPCUA.opcua_subscription import OpcuaSubscription
+# from drivers.OPCUA.opcua_subscription import OpcuaSubscription
 
 
 
