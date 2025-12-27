@@ -6,10 +6,10 @@ from db.database import get_db
 
 from db.models import main_tags, related_tags
 from db.models import network_data_source_model
-from drivers.OPCUA.opcua_client import OpcUaClient
+from drivers.OPCUA.opcua_client import OpcUaConnection
 from drivers.OPCUA.data_handler import DataHandler
 
-from drivers.OPCUA.opcua_new_client import OpcUaConnection
+# from drivers.OPCUA.opcua_new_client import OpcUaConnection
 from drivers.OPCUA.opcua_manager import OpcUaConnectionManager
 # TESTING
 from drivers.OPCUA.opcua_subscription import OpcuaSubscription
@@ -21,67 +21,115 @@ ACTIVE_TAGS = {}
 
 
 @router.post("/opcua/start-subscription/{tag_id}")
-async def start_subscription_tag(tag_id: int, db: Session = Depends(get_db)):
-        # Request main tag from database
-    tag = db.query(main_tags.MainTags).filter(main_tags.MainTags.id == tag_id).first()
+async def start_subscription_tag(
+    tag_id: int,
+    db: Session = Depends(get_db)
+):
+    # 1️⃣ Pobranie main tag
+    tag = (
+        db.query(main_tags.MainTags)
+        .filter(main_tags.MainTags.id == tag_id)
+        .first()
+    )
+
     if not tag:
-        return {"error": "Invalid tag id"}
+        raise HTTPException(status_code=404, detail="Invalid tag id")
+
     if tag_id in ACTIVE_TAGS:
         return {"status": "already running"}
-    
+
     main_tag_address = tag.tag_address
     main_tag_name = tag.tag_name
-    # Request related tag to main tag
-    related_tags_list = db.query(related_tags.RelatedTags).filter(
-        related_tags.RelatedTags.main_tag_id == tag.id
-    ).all()
-    # Mapa nodeid -> tag_name (fallback: nodeid)
+
+    # 2️⃣ Pobranie related tags
+    related_tags_list = (
+        db.query(related_tags.RelatedTags)
+        .filter(related_tags.RelatedTags.main_tag_id == tag.id)
+        .all()
+    )
+
+    # 3️⃣ Mapa nodeid → tag_name
     nodeid_to_name = {
         main_tag_address: main_tag_name
     }
+
     for t in related_tags_list:
         nodeid_to_name[t.tag_address] = t.tag_name or t.tag_address
-    # Create tag_adresses list with only addresses
+
     tag_addresses = list(nodeid_to_name.keys())
 
-    # Create data handler to map in opcUa - and store main tag threshold (power in Amps)
+    # 4️⃣ DataHandler
     data_handler = DataHandler(
         tag_id=tag.id,
         main_nodeid=main_tag_address,
         nodeid_to_name=nodeid_to_name,
         threshold=tag.threshold,
         db=db
-    ) 
-    # Launch subscription
-    # get data source adress to get singleton client
-    server_url = f"opc.tcp://{tag.network_data_sources.server_url}:{tag.network_data_sources.port}"
-    connection = OpcUaConnection(server_url)
-    client = connection.get_client()
+    )
+
+    # 5️⃣ OPC UA connection (PRZEZ MANAGERA)
+    server_url = (
+        f"opc.tcp://"
+        f"{tag.network_data_sources.server_url}:"
+        f"{tag.network_data_sources.port}"
+    )
+
+    try:
+        connection = await OpcUaConnectionManager.get_connection(server_url)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to connect to OPC UA: {e}"
+        )
+
     if not connection.is_connected():
-        raise HTTPException(status_code=500, detail="Not connected to OPC UA")
-    
-    subscription = OpcuaSubscription(id=tag_id, client=client,polls=tag.polls,subscription_handler=data_handler)
+        raise HTTPException(
+            status_code=500,
+            detail="Not connected to OPC UA"
+        )
+
+    client = connection.get_client()
+
+    # 6️⃣ Subskrypcja
+    subscription = OpcuaSubscription(
+        id=tag_id,
+        client=client,
+        polls=tag.polls,
+        subscription_handler=data_handler
+    )
+
     task = asyncio.create_task(subscription.run(tag_addresses))
-        # wait few seconds for connection
+
+    # 7️⃣ Czekamy aż subskrypcja faktycznie ruszy
     for _ in range(50):
         await asyncio.sleep(0.1)
         if subscription.is_running():
             break
 
-    # Check if client is running if not return error
     if not subscription.is_running():
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
-        raise HTTPException(status_code=504, detail="OPC UA connection timeout")
 
+        raise HTTPException(
+            status_code=504,
+            detail="OPC UA subscription timeout"
+        )
+
+    # 8️⃣ Rejestracja aktywnej subskrypcji
     ACTIVE_TAGS[tag_id] = {
         "task": task,
-        "subscription": subscription
+        "subscription": subscription,
+        "server_url": server_url
     }
-    return {"status": f"tag {tag_id} started"}
+
+    return {
+        "status": "started",
+        "tag_id": tag_id,
+        "server_url": server_url
+    }
 
 
 @router.post("/opcua/stop-subscription/{tag_id}")
@@ -128,6 +176,8 @@ async def opcua_connect(
     # OPCUA connectionManager
     opc = await OpcUaConnectionManager.get_connection(server_url)
 
+    # TODO
+    # Connection manager not working properly
     if not opc.is_connected():
         raise HTTPException(500, "Can't connect to OPC UA")
 

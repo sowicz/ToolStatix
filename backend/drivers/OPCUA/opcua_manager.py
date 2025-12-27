@@ -1,5 +1,5 @@
 import asyncio
-from backend.drivers.OPCUA.opcua_client import OpcUaConnection
+from drivers.OPCUA.opcua_client import OpcUaConnection
 
 
 class OpcUaConnectionManager:

@@ -25,11 +25,7 @@ class OpcUaConnection:
                 print(f"[OpcUa] 🔌 Disconnected {self.url}")
 
     def is_connected(self) -> bool:
-        try:
-            socket = self.client.uaclient._uasocket
-            return socket is not None and not socket.closed
-        except Exception:
-            return False
+        return self.connected
 
     def get_client(self) -> Client:
         return self.client
