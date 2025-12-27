@@ -9,8 +9,7 @@ from db.models import network_data_source_model
 
 from drivers.OPCUA.data_handler import DataHandler
 from drivers.OPCUA.opcua_manager import OpcUaConnectionManager
-# TESTING
-# from drivers.OPCUA.opcua_subscription import OpcuaSubscription
+from drivers.OPCUA.opcua_subscription import OpcuaSubscription
 
 
 
