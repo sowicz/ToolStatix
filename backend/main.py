@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from api.v1.machines import router as machines_api_router
 from api.v1.network_data_source import router as network_data_source_api_router
 from api.v1.tags import router as tags_router
@@ -10,6 +11,16 @@ from api.v1.report import router as report
 
 
 app = FastAPI(title="ToolStatix")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 app.include_router(machines_api_router)

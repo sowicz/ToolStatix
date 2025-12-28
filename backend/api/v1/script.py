@@ -272,16 +272,28 @@ async def opcua_status(
 
     return {
         "data_source_id": data_source.id,
-        "machine_id": data_source.machine_id,
-        "machine_name": data_source.machines.name,
+        "protocol": data_source.protocol,
         "server_url": server_url,
-        "connected": OpcUaConnectionManager.is_connected(server_url)
+        "connected": OpcUaConnectionManager.is_connected(server_url),
+        "machine": {
+            "id": data_source.machine_id,
+            "name": data_source.machines.name
+        },
+        "main_tags": [
+            {
+                "tag_id": tag.id,
+                "tag_name": tag.tag_name,
+                "tag_address": tag.tag_address,
+                "active": tag.id in ACTIVE_TAGS
+            }
+            for tag in data_source.main_tags
+        ]
     }
 
 
 
 @router.get("/opcua/status/data-sources-all")
-async def opcua_data_sources_status(
+async def opcua_status_all_data_sources(
     db: Session = Depends(get_db)
 ):
     data_sources = (
@@ -295,13 +307,27 @@ async def opcua_data_sources_status(
     for ds in data_sources:
         server_url = f"opc.tcp://{ds.server_url}:{ds.port}"
 
-        result.append({
+        ds_entry = {
             "data_source_id": ds.id,
-            "machine_id": ds.machine_id,
-            "machine_name": ds.machines.name,
             "protocol": ds.protocol,
             "server_url": server_url,
-            "connected": OpcUaConnectionManager.is_connected(server_url)
-        })
+            "connected": OpcUaConnectionManager.is_connected(server_url),
+            "machine": {
+                "id": ds.machine_id,
+                "name": ds.machines.name,
+            },
+            "main_tags": []
+        }
+
+        # 🔑 main tags dla data source
+        for tag in ds.main_tags:
+            ds_entry["main_tags"].append({
+                "tag_id": tag.id,
+                "tag_name": tag.tag_name,
+                "tag_address": tag.tag_address,
+                "active": tag.id in ACTIVE_TAGS
+            })
+
+        result.append(ds_entry)
 
     return result
