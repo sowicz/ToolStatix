@@ -33,8 +33,13 @@ class NetworkDataSourceCreate(NetworkDataSourceBase):
 
 class NetworkDataSourceRead(NetworkDataSourceBase):
     id: int
+    server_url: str
+    port: int
+    protocol: str
+
 
     class Config:
+        from_attributes = True
         orm_mode = True
 
 
@@ -56,8 +61,16 @@ class MainTagsCreate(MainTagsBase):
 
 class MainTagsRead(MainTagsBase):
     id: int
+    tag_name: str
+    tag_address: str
+    type: str
+    unit: str
+    threshold: int
+    polls: int
+    network_data_sources: NetworkDataSourceRead
 
     class Config:
+        from_attributes = True
         orm_mode = True
 
 

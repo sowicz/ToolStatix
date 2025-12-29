@@ -27,4 +27,8 @@ def create_tag(tag: schema.MainTagsCreate, db: Session = Depends(get_db)):
 
 @router.get("/tags", response_model=List[schema.MainTagsRead])
 def list_tags(db: Session = Depends(get_db)):
-    return db.query(main_tags.MainTags).all()
+    return (
+        db.query(main_tags.MainTags)
+        .join(main_tags.MainTags.network_data_sources)
+        .all()
+    )

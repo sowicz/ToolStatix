@@ -222,12 +222,25 @@ async def disconnect_opcua(
     if not conn or not conn.is_connected():
         raise HTTPException(status_code=400, detail="Already disconnected")
 
+    # 1️⃣ disconnect OPC UA
     await conn.disconnect()
+
+    # 2️⃣ usuń wszystkie ACTIVE_TAGS powiązane z tym server_url
+    to_remove = [tag_id for tag_id, info in ACTIVE_TAGS.items()
+                 if info.get("server_url") == server_url]
+
+    for tag_id in to_remove:
+        # opcjonalnie: cancel task jeśli jeszcze żyje
+        task = ACTIVE_TAGS[tag_id].get("task")
+        if task and not task.done():
+            task.cancel()
+        del ACTIVE_TAGS[tag_id]
 
     return {
         "server_url": server_url,
-        "connected": False
+        "connected": False,
     }
+
 
 
 @router.get("/active-tags")
