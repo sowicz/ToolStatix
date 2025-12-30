@@ -1,4 +1,3 @@
-
 ## ToolStatix
 
 Projekt prototypowy służący do określania **żywotności**, **przebiegu** oraz innych **parametrów narzędzi** za pomocą **analizy pomiarów natężenia prądu**.
@@ -7,12 +6,10 @@ Obrabiarka (maszyna CNC), chcąc utrzymać stabilne obroty narzędzia (RPM) pod 
 
 Dodatkowo należy określić I/O sygnał wymiany narzędzia (zakończeniu pracy narzędzia), to pozwoli automatycznie wygenerować raport.
 
-
 ## 🎯 Cel projektu
 
 - Zbieranie statystyk pracy narzędzi obróbki CNC.
 - Automatyczny raport przebiegu oraz innych powiązanych parametrów.
-
 
 ## ⚙️ Główne funkcje
 
@@ -21,7 +18,6 @@ Dodatkowo należy określić I/O sygnał wymiany narzędzia (zakończeniu pracy 
 - Zbieranie danych i archiwizacja danych do bazy
 - Generowanie raportu przebiegu narzędzia i parametrów pracy
 
-
 ## 🖼️ Schemat działania
 
 1. Ustalenie maszyn i źródła danych
@@ -29,52 +25,64 @@ Dodatkowo należy określić I/O sygnał wymiany narzędzia (zakończeniu pracy 
 3. Dodanie adresów powiązanych parametrów (related_tags) jeżeli są potrzebne.
 4. Start śledzenia wartości prądu
 5. Po przekroczeniu threshold program zapisuje wartości do pamięci podręcznej.
-6. Po spadku wartości prądu poniżej threshold, zostaje zapisana do bazy danych statystyka przebiegu: min, max, średnia, czas pracy. 
-
+6. Po spadku wartości prądu poniżej threshold, zostaje zapisana do bazy danych statystyka przebiegu: min, max, średnia, czas pracy.
 
 ## Ważne uwagi
 
 ### 06.08.2025
 
 - Projek powstał w celu nauki i treningu
-- Aktualnie dostępny *driver to OPCUA
-Oznacza to że maszyna / obrabiarka musi mieć zmierzoną wartość prądu i zapisaną na sterowniku, bądź w innych możliwym miejscu do pobrania przez serwer OPC
-Oznacza to że potrzebny jest już skonfigurowany serwer OPC oraz dostępna zmierzona wartość prądu.
+- Aktualnie dostępny \*driver to OPCUA
+  Oznacza to że maszyna / obrabiarka musi mieć zmierzoną wartość prądu i zapisaną na sterowniku, bądź w innych możliwym miejscu do pobrania przez serwer OPC
+  Oznacza to że potrzebny jest już skonfigurowany serwer OPC oraz dostępna zmierzona wartość prądu.
 - Możliwe rozbudowanie o sygnały analogowe, oraz drivery MODBUS RTU, MODBUS TCP, MQTT.
 
 ### ✅ TODO
-- dodanie obsługi sygnału do wymiany narzędzia 
-- usunięcie z bazy danych rekordów zużytego narzędzia - Raport OK 
 
-### *
+- Informacja do frontend o subskrypcji TAGu którego nie ma w serverze (pusta subskrypcja)
+- dodanie obsługi sygnału do wymiany narzędzia
+- dodanie endpointu do zwrócenia dostępnych raportów
+- dodanie endpointu do sciągnięcia raportu
+- usunięcie z bazy danych rekordów zużytego narzędzia po wygenerowaniu raportu
+
+###
 
 **Driver** - określa sposób / biblioteki do zbierania danych np. MODBUS / OPCUA / MQTT
 
 ## How to run
 
-1) Start MariaDB docker container (first download image) on port 3306
+1. Start MariaDB docker container (first download image) on port 3306
 
-2) open /ToolStatix/backend and create venv
+2. open /ToolStatix and create venv
 
 ```
 python -m venv venv
 ```
-3) run script to work on venv
+
+3. run script to work on venv
 
 Powershell
+
 ```
 ./venv/scripts/activate
 ```
 
-4) install requirements.txt
+3. Go into directory
+
+```
+cd /ToolStatix/backend
+```
+
+4. install requirements.txt
 
 ```
 pip install requirements.txt
 ```
 
-5) create /backend/.env file
+5. create /backend/.env file
 
 **Don't change FIRST_LOGIN_ROOT_PASS**
+
 ```
 FIRST_LOGIN_ROOT_PASS=password
 ROOT_PASSWORD=
@@ -82,7 +90,7 @@ DB_ADMIN_PASSWORD=
 DB_USER_PASSWORD=
 ```
 
-6) run python script /backend/db_init.py - to initialize db tables and users
+6. run python script /backend/db_init.py - to initialize db tables and users
 
 ```
 cd core
@@ -90,7 +98,8 @@ cd core
 python db_init.py
 
 ```
-7) run API in development
+
+7. run API in development
 
 ```
 fastapi dev main.py
