@@ -47,7 +47,9 @@ class DataSourceValidator(Validator):
             )
         
 
-
+# CHANGE
+# can be more tag for the same data source
+#
 class MachineTagValidator(Validator):
     def validate(self, data: main_tags.MainTags):
         self.check_if_exists(
@@ -57,7 +59,7 @@ class MachineTagValidator(Validator):
             )
         exists = self.db.query(main_tags.MainTags).filter(
             and_(
-                main_tags.MainTags.network_data_source_id == data.network_data_source_id,
+                # main_tags.MainTags.network_data_source_id == data.network_data_source_id,
                 main_tags.MainTags.tag_address == data.tag_address,
 
             )
@@ -65,7 +67,7 @@ class MachineTagValidator(Validator):
 
         if exists:
             raise ValueError(
-                f"A data source for this machine with the same data_source and tag_address already exists."
+                f"This tag_address already exists."
         )
 
 
